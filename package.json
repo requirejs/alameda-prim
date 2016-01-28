@@ -1,26 +1,26 @@
 {
-    "name": "alameda",
-    "description": "AMD loader, like requirejs, but with promises and for modern browsers",
+    "name": "alameda-prim",
+    "description": "AMD loader, like alameda, but includes private promise shim",
     "version": "0.2.1+",
-    "homepage": "http://github.com/requirejs/alameda",
+    "homepage": "http://github.com/requirejs/alameda-prim",
     "author": "James Burke <jrburke@gmail.com> (http://github.com/jrburke)",
     "licenses": [
         {
             "type": "BSD",
-            "url": "https://github.com/requirejs/alameda/blob/master/LICENSE"
+            "url": "https://github.com/requirejs/alameda-prim/blob/master/LICENSE"
         },
         {
             "type": "MIT",
-            "url": "https://github.com/requirejs/alameda/blob/master/LICENSE"
+            "url": "https://github.com/requirejs/alameda-prim/blob/master/LICENSE"
         }
     ],
     "repository": {
         "type": "git",
-        "url": "https://github.com/requirejs/alameda.git"
+        "url": "https://github.com/requirejs/alameda-prim.git"
     },
-    "main": "alameda.js",
+    "main": "alameda-prim.js",
     "volo": {
-        "url": "https://raw.github.com/requirejs/alameda/{version}/alameda.js"
+        "url": "https://raw.github.com/requirejs/alameda-prim/{version}/alameda-prim.js"
     },
     "engines": {
         "node": ">=0.4.0"

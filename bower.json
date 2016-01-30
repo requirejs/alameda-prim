@@ -1,0 +1,22 @@
+{
+  "name": "alameda-prim",
+  "version": "0.3.0",
+  "ignore": [
+    ".gitignore",
+    ".npmignore",
+    "node_modules",
+    "package.json",
+    "README.md",
+    "parts"
+  ],
+  "homepage": "https://github.com/requirejs/alameda-prim",
+  "authors": [
+    "jrburke.com"
+  ],
+  "description": "The alameda AMD loader that includes a private promise shim",
+  "main": "alameda.js",
+  "license": [
+    "BSD-3-Clause",
+    "MIT"
+  ]
+}

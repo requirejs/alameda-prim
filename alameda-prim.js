@@ -1,5 +1,5 @@
 /**
- * alameda 0.2.1+ Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
+ * alameda 0.3.0 Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/requirejs/alameda for details
  */
@@ -9,9 +9,7 @@
 
 var requirejs, require, define;
 (function (global, Promise, undef) {
-    Promise = undefined;
     if (!Promise) {
-      console.log("PRIM TIME BABY");
       //START prim 0.0.7
       /**
        * Changes from baseline prim
@@ -246,7 +244,8 @@ var requirejs, require, define;
         urlRegExp = /^\/|\:|\?|\.js$/,
         commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
         cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
-        jsSuffixRegExp = /\.js$/;
+        jsSuffixRegExp = /\.js$/,
+        slice = Array.prototype.slice;
 
     if (typeof requirejs === 'function') {
         return;
@@ -567,17 +566,19 @@ var requirejs, require, define;
                 }
 
                 //Support require(['a'])
-                callback = callback || function () {};
+                callback = callback || function () {
+                  // In case used later as a promise then value, return the
+                  // arguments as an array.
+                  return slice.call(arguments, 0);
+                };
 
                 //Complete async to maintain expected execution semantics.
-                asyncResolve.then(function () {
-                    //Grab any modules that were defined after a
-                    //require call.
+                return asyncResolve.then(function () {
+                    //Grab any modules that were defined after a require call.
                     takeQueue();
-                    main(undef, deps || [], callback, errback, relName);
-                });
 
-                return req;
+                    return main(undef, deps || [], callback, errback, relName);
+                });
             };
 
             req.isBrowser = typeof document !== 'undefined' &&
@@ -698,6 +699,8 @@ var requirejs, require, define;
         }
 
         function defineModule(d) {
+            d.factoryCalled = true;
+
             var name = d.map.id,
                 ret = d.factory.apply(defined[name], d.values);
 
@@ -734,11 +737,25 @@ var requirejs, require, define;
             }
         }
 
-        function makeDefer(name) {
+        function makeDefer(name, errback) {
             var d = {};
             d.promise = new Promise(function (resolve, reject) {
                 d.resolve = resolve;
-                d.reject = reject;
+                d.reject = function(err) {
+                  if (!name) {
+                    requireDeferreds.splice(requireDeferreds.indexOf(d), 1);
+                  }
+                  if (errback && (!name && !d.factoryCalled)) {
+                    try {
+                      err = errback(err);
+                      resolve(err);
+                    } catch (e) {
+                      reject(e);
+                    }
+                  } else {
+                    reject(err);
+                  }
+                };
             });
             d.map = name ? makeMap(name, null, true) : {};
             d.depCount = 0;
@@ -755,7 +772,7 @@ var requirejs, require, define;
             return d;
         }
 
-        function getDefer(name) {
+        function getDefer(name, errback) {
             var d;
             if (name) {
                 d = hasProp(deferreds, name) && deferreds[name];
@@ -763,7 +780,7 @@ var requirejs, require, define;
                     d = deferreds[name] = makeDefer(name);
                 }
             } else {
-                d = makeDefer();
+                d = makeDefer(undefined, errback);
                 requireDeferreds.push(d);
             }
             return d;
@@ -1095,7 +1112,7 @@ var requirejs, require, define;
                 //It is possible to disable the wait interval by using waitSeconds of 0.
                 expired = waitInterval && (startTime + waitInterval) < (new Date()).getTime();
 
-            if (loadCount === 0) {
+        if (loadCount === 0) {
                 //If passed in a deferred, it is for a specific require call.
                 //Could be a sync case that needs resolution right away.
                 //Otherwise, if no deferred, means it was the last ditch
@@ -1159,7 +1176,7 @@ var requirejs, require, define;
             }
             calledDefine[name] = true;
 
-            var d = getDefer(name);
+            var d = getDefer(name, errback);
 
             //This module may not have dependencies
             if (deps && !Array.isArray(deps)) {
@@ -1170,7 +1187,11 @@ var requirejs, require, define;
                 deps = [];
             }
 
-            d.promise.catch(errback || delayedError);
+            // Only use delayedError if there is not an errback specified. If
+            // if there is an errback, it means it will handle the error.
+            if (name && !errback) {
+              d.promise.catch(delayedError);
+            }
 
             //Use name if no relName
             relName = relName || name;
@@ -1243,6 +1264,8 @@ var requirejs, require, define;
             if (!name) {
                 check(d);
             }
+
+            return d.promise;
         };
 
         req = makeRequire(null, true);
@@ -1386,7 +1409,7 @@ var requirejs, require, define;
     topReq.contexts = contexts;
 
     define = function () {
-        queue.push([].slice.call(arguments, 0));
+        queue.push(slice.call(arguments, 0));
     };
 
     define.amd = {

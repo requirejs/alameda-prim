@@ -1,5 +1,5 @@
 /**
- * alameda 0.3.0 Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
+ * alameda 0.3.1 Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/requirejs/alameda for details
  */
@@ -707,7 +707,7 @@ var requirejs, require, define;
                 };
 
         function callPlugin(plugin, map, relName) {
-            plugin.load(map.n, makeRequire(relName), makeLoad(map.id), {});
+            plugin.load(map.n, makeRequire(relName), makeLoad(map.id), config);
         }
 
         callDep = function (map, relName) {

@@ -1,4 +1,4 @@
-//START prim 0.0.7
+//START prim 1.0.0
       /**
        * Changes from baseline prim
        * - removed UMD registration
@@ -95,7 +95,10 @@
 
                     try {
                         var then = v && v.then;
-                        if (isFunObj(v) && typeof then === 'function') {
+                        if (isFunObj(v) && typeof then === 'function' &&
+                            // if error, keep on error pathway if a promise,
+                            // 2.2.7.2 tests.
+                            prop !== 'e') {
                             f2 = makeFulfill();
                             then.call(v, f2.resolve, f2.reject);
                         } else {

@@ -16,7 +16,6 @@
   "description": "The alameda AMD loader that includes a private promise shim",
   "main": "alameda.js",
   "license": [
-    "BSD-3-Clause",
     "MIT"
   ]
 }

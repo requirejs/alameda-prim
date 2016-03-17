@@ -1,8 +1,6 @@
 /**
- * alameda 0.3.2
- * Copyright (c) 2011-2016, The Dojo Foundation All Rights Reserved.
- * Available via the MIT or new BSD license.
- * see: http://github.com/requirejs/alameda for details
+ * @license alameda 1.0.0 Copyright jQuery Foundation and other contributors.
+ * Released under MIT license, http://github.com/requirejs/alameda/LICENSE
  */
 // Going sloppy because loader plugin execs may depend on non-strict execution.
 /*jslint sloppy: true, nomen: true, regexp: true */
@@ -11,7 +9,7 @@
 var requirejs, require, define;
 (function (global, Promise, undef) {
   if (!Promise) {
-    //START prim 0.0.7
+    //START prim 1.0.0
       /**
        * Changes from baseline prim
        * - removed UMD registration
@@ -108,7 +106,10 @@ var requirejs, require, define;
 
                     try {
                         var then = v && v.then;
-                        if (isFunObj(v) && typeof then === 'function') {
+                        if (isFunObj(v) && typeof then === 'function' &&
+                            // if error, keep on error pathway if a promise,
+                            // 2.2.7.2 tests.
+                            prop !== 'e') {
                             f2 = makeFulfill();
                             then.call(v, f2.resolve, f2.reject);
                         } else {
@@ -252,6 +253,11 @@ var requirejs, require, define;
     return;
   }
 
+  // Could match something like ')//comment', do not lose the prefix to comment.
+  function commentReplace(match, multi, multiText, singlePrefix) {
+    return singlePrefix || '';
+  }
+
   function hasProp(obj, prop) {
     return hasOwn.call(obj, prop);
   }
@@ -360,14 +366,13 @@ var requirejs, require, define;
           ary.splice(i, 1);
           i -= 1;
         } else if (part === '..') {
-          if (i === 1 && (ary[2] === '..' || ary[0] === '..')) {
-            // End of the line. Keep at least one non-dot
-            // path segment at the front so it can be mapped
-            // correctly to disk. Otherwise, there is likely
-            // no path mapping for a path starting with '..'.
-            // This can still fail, but catches the most reasonable
-            // uses of ..
-            break;
+          // If at the start, or previous value is still ..,
+          // keep them so that when converted to a path it may
+          // still work when converted to a path, even though
+          // as an ID it is less than ideal. In larger point
+          // releases, may be better to just kick out an error.
+          if (i === 0 || (i === 1 && ary[2] === '..') || ary[i - 1] === '..') {
+            continue;
           } else if (i > 0) {
             ary.splice(i - 1, 2);
             i -= 2;
@@ -394,37 +399,33 @@ var requirejs, require, define;
         map = config.map,
         starMap = map && map['*'];
 
-      // Adjust any relative paths.
-      if (name && name.charAt(0) === '.') {
-        // If have a base name, try to normalize against it,
-        // otherwise, assume it is a top-level require that will
-        // be relative to baseUrl in the end.
-        if (baseName) {
-          // Convert baseName to array, and lop off the last part,
-          // so that . matches that 'directory' and not name of the baseName's
-          // module. For instance, baseName of 'one/two/three', maps to
-          // 'one/two/three.js', but we want the directory, 'one/two' for
-          // this normalization.
-          normalizedBaseParts = baseParts.slice(0, baseParts.length - 1);
-          name = name.split('/');
-          lastIndex = name.length - 1;
 
-          // If wanting node ID compatibility, strip .js from end
-          // of IDs. Have to do this here, and not in nameToUrl
-          // because node allows either .js or non .js to map
-          // to same file.
-          if (config.nodeIdCompat && jsSuffixRegExp.test(name[lastIndex])) {
-            name[lastIndex] = name[lastIndex].replace(jsSuffixRegExp, '');
-          }
+      //Adjust any relative paths.
+      if (name) {
+        name = name.split('/');
+        lastIndex = name.length - 1;
 
-          name = normalizedBaseParts.concat(name);
-          trimDots(name);
-          name = name.join('/');
-        } else if (name.indexOf('./') === 0) {
-          // No baseName, so this is ID is resolved relative
-          // to baseUrl, pull off the leading dot.
-          name = name.substring(2);
+        // If wanting node ID compatibility, strip .js from end
+        // of IDs. Have to do this here, and not in nameToUrl
+        // because node allows either .js or non .js to map
+        // to same file.
+        if (config.nodeIdCompat && jsSuffixRegExp.test(name[lastIndex])) {
+          name[lastIndex] = name[lastIndex].replace(jsSuffixRegExp, '');
         }
+
+        // Starts with a '.' so need the baseName
+        if (name[0].charAt(0) === '.' && baseParts) {
+          //Convert baseName to array, and lop off the last part,
+          //so that . matches that 'directory' and not name of the baseName's
+          //module. For instance, baseName of 'one/two/three', maps to
+          //'one/two/three.js', but we want the directory, 'one/two' for
+          //this normalization.
+          normalizedBaseParts = baseParts.slice(0, baseParts.length - 1);
+          name = normalizedBaseParts.concat(name);
+        }
+
+        trimDots(name);
+        name = name.join('/');
       }
 
       // Apply map config if available.
@@ -636,14 +637,13 @@ var requirejs, require, define;
 
           // Join the path parts together, then figure out if baseUrl is needed.
           url = syms.join('/');
-          url += (ext || (/^data\:|\?/.test(url) || skipExt ? '' : '.js'));
+          url += (ext || (/^data\:|^blob\:|\?/.test(url) || skipExt ? '' : '.js'));
           url = (url.charAt(0) === '/' ||
                 url.match(/^[\w\+\.\-]+:/) ? '' : config.baseUrl) + url;
         }
 
-        return config.urlArgs ? url +
-                    ((url.indexOf('?') === -1 ? '?' : '&') +
-                     config.urlArgs) : url;
+        return config.urlArgs && !/^blob\:/.test(url) ?
+               url + config.urlArgs(moduleName, url) : url;
       };
 
       /**
@@ -1028,7 +1028,16 @@ var requirejs, require, define;
         if (plugin && plugin.normalize) {
           name = plugin.normalize(name, makeNormalize(relName));
         } else {
-          name = normalize(name, relName, applyMap);
+          // If nested plugin references, then do not try to
+          // normalize, as it will not normalize correctly. This
+          // places a restriction on resourceIds, and the longer
+          // term solution is not to normalize until plugins are
+          // loaded and all normalizations to allow for async
+          // loading of a loader plugin. But for now, fixes the
+          // common uses. Details in requirejs#1131
+          name = name.indexOf('!') === -1 ?
+                   normalize(name, relName, applyMap) :
+                   name;
         }
       } else {
         name = normalize(name, relName, applyMap);
@@ -1217,7 +1226,7 @@ var requirejs, require, define;
           // but only if there are function args.
           factory
             .toString()
-            .replace(commentRegExp, '')
+            .replace(commentRegExp, commentReplace)
             .replace(cjsRequireRegExp, function (match, dep) {
               deps.push(dep);
             });
@@ -1299,6 +1308,14 @@ var requirejs, require, define;
         if (cfg.baseUrl.charAt(cfg.baseUrl.length - 1) !== '/') {
           cfg.baseUrl += '/';
         }
+      }
+
+      // Convert old style urlArgs string to a function.
+      if (typeof cfg.urlArgs === 'string') {
+        var urlArgs = cfg.urlArgs;
+        cfg.urlArgs = function(id, url) {
+          return (url.indexOf('?') === -1 ? '?' : '&') + urlArgs;
+        };
       }
 
       // Save off the paths and packages since they require special processing,
@@ -1441,7 +1458,11 @@ var requirejs, require, define;
       // like a module name.
       dataMain = dataMain.replace(jsSuffixRegExp, '');
 
-      if (!bootstrapConfig || !bootstrapConfig.baseUrl) {
+      // Set final baseUrl if there is not already an explicit one,
+      // but only do so if the data-main value is not a loader plugin
+      // module ID.
+      if ((!bootstrapConfig || !bootstrapConfig.baseUrl) &&
+          dataMain.indexOf('!') === -1) {
         // Pull off the directory of data-main for use as the
         // baseUrl.
         src = dataMain.split('/');

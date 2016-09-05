@@ -1,7 +1,7 @@
 {
     "name": "alameda-prim",
     "description": "The alameda AMD loader that includes a private promise shim",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "homepage": "http://github.com/requirejs/alameda-prim",
     "author": "James Burke <jrburke@gmail.com> (http://github.com/jrburke)",
     "license": "MIT",

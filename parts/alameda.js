@@ -1,5 +1,5 @@
 /**
- * @license alameda 1.0.0 Copyright jQuery Foundation and other contributors.
+ * @license alameda 1.1.0 Copyright jQuery Foundation and other contributors.
  * Released under MIT license, http://github.com/requirejs/alameda/LICENSE
  */
 // Going sloppy because loader plugin execs may depend on non-strict execution.
@@ -19,7 +19,7 @@ var requirejs, require, define;
     queue = [],
     currDirRegExp = /^\.\//,
     urlRegExp = /^\/|\:|\?|\.js$/,
-    commentRegExp = /(\/\*([\s\S]*?)\*\/|([^:]|^)\/\/(.*)$)/mg,
+    commentRegExp = /\/\*[\s\S]*?\*\/|([^:"'=]|^)\/\/.*$/mg,
     cjsRequireRegExp = /[^.]\s*require\s*\(\s*["']([^'"\s]+)["']\s*\)/g,
     jsSuffixRegExp = /\.js$/,
     slice = Array.prototype.slice;
@@ -29,7 +29,7 @@ var requirejs, require, define;
   }
 
   // Could match something like ')//comment', do not lose the prefix to comment.
-  function commentReplace(match, multi, multiText, singlePrefix) {
+  function commentReplace(match, singlePrefix) {
     return singlePrefix || '';
   }
 

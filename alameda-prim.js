@@ -1,5 +1,5 @@
 /**
- * @license alameda 1.1.0 Copyright jQuery Foundation and other contributors.
+ * @license alameda 1.1.1 Copyright jQuery Foundation and other contributors.
  * Released under MIT license, http://github.com/requirejs/alameda/LICENSE
  */
 // Going sloppy because loader plugin execs may depend on non-strict execution.
@@ -747,7 +747,7 @@ var requirejs, require, define;
       }
     }
 
-    function makeDefer(name) {
+    function makeDefer(name, calculatedMap) {
       var d = {};
       d.promise = new Promise(function (resolve, reject) {
         d.resolve = resolve;
@@ -758,7 +758,7 @@ var requirejs, require, define;
           reject(err);
         };
       });
-      d.map = name ? makeMap(name, null, true) : {};
+      d.map = name ? (calculatedMap || makeMap(name)) : {};
       d.depCount = 0;
       d.depMax = 0;
       d.values = [];
@@ -773,12 +773,12 @@ var requirejs, require, define;
       return d;
     }
 
-    function getDefer(name) {
+    function getDefer(name, calculatedMap) {
       var d;
       if (name) {
         d = hasProp(deferreds, name) && deferreds[name];
         if (!d) {
-          d = deferreds[name] = makeDefer(name);
+          d = deferreds[name] = makeDefer(name, calculatedMap);
         }
       } else {
         d = makeDefer();
@@ -953,7 +953,7 @@ var requirejs, require, define;
           } else {
             return callDep(makeMap(map.pr)).then(function (plugin) {
               // Redo map now that plugin is known to be loaded
-              var newMap = makeMap(name, relName, true),
+              var newMap = map.prn ? map : makeMap(name, relName, true),
                 newId = newMap.id,
                 shim = getOwn(config.shim, newId);
 
@@ -1007,7 +1007,7 @@ var requirejs, require, define;
         return name;
       }
 
-      var plugin, url, parts, prefix, result,
+      var plugin, url, parts, prefix, result, prefixNormalized,
         cacheKey = name + ' & ' + (relName || '') + ' & ' + !!applyMap;
 
       parts = splitPrefix(name);
@@ -1027,6 +1027,7 @@ var requirejs, require, define;
       if (prefix) {
         if (plugin && plugin.normalize) {
           name = plugin.normalize(name, makeNormalize(relName));
+          prefixNormalized = true;
         } else {
           // If nested plugin references, then do not try to
           // normalize, as it will not normalize correctly. This
@@ -1053,7 +1054,8 @@ var requirejs, require, define;
         id: prefix ? prefix + '!' + name : name, // fullName
         n: name,
         pr: prefix,
-        url: url
+        url: url,
+        prn: prefix && prefixNormalized
       };
 
       if (!prefix) {
@@ -1094,7 +1096,7 @@ var requirejs, require, define;
       if (!d.finished && d.deps) {
         d.deps.forEach(function (depMap) {
           var depId = depMap.id,
-            dep = !hasProp(handlers, depId) && getDefer(depId);
+            dep = !hasProp(handlers, depId) && getDefer(depId, depMap);
 
           // Only force things that have not completed
           // being defined, so still in the registry,
